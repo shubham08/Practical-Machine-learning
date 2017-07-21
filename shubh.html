@@ -1,0 +1,89 @@
+<h5>DataSet Overview</h5>
+Environmant preparation
+rm(list=ls())                # free up memory for the download of the data sets
+setwd("~/Cursos/Data Science/08 Practical Machine Learning/Projeto")
+library(knitr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+library(corrplot)
+set.seed(12345)
+<h5>############################Data cLeaning and loading###############</h5>
+# set the URL for the download
+trainingURL <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testingURL <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+<h4># download the datasets</h4>
+training <- read.csv(url(UrlTrain))
+testing  <- read.csv(url(UrlTest))
+
+<h4># create a partition with the training dataset </h4>
+inTrain  <- createDataPartition(training$classe, p=0.7, list=FALSE)
+TrainSet <- training[inTrain, ]
+TestSet  <- training[-inTrain, ]
+dim(TrainSet)
+
+
+NZV <- nearZeroVar(TrainSet)
+TrainSet <- TrainSet[, -NZV]
+TestSet  <- TestSet[, -NZV]
+dim(TrainSet)
+AllNA    <- sapply(TrainSet, function(x) mean(is.na(x))) > 0.95
+TrainSet <- TrainSet[, AllNA==FALSE]
+TestSet  <- TestSet[, AllNA==FALSE]
+dim(TrainSet)
+TrainSet <- TrainSet[, -(1:5)]
+TestSet  <- TestSet[, -(1:5)]
+dim(TrainSet)
+corMatrix <- cor(TrainSet[, -54])
+corrplot(corMatrix, order = "FPC", method = "color", type = "lower", 
+         tl.cex = 0.8, tl.col = rgb(0, 0, 0))
+         set.seed(12345)
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modFitRandForest <- train(classe ~ ., data=TrainSet, method="rf",
+                          trControl=controlRF)
+                          eld importance
+<h4>Summary of random Tree forest</h4>
+Data distribution:
+    A: 28.44% (5580 instances)
+    B: 19.35% (3797 instances)
+    C: 17.44% (3422 instances)
+    D: 16.39% (3216 instances)
+    E: 18.38% (3607 instances)
+Predicted distribution:
+    A: 28.44% (5580 instances)
+    B: 19.35% (3797 instances)
+    C: 17.44% (3422 instances)
+    D: 16.39% (3216 instances)
+    E: 18.38% (3607 instances)
+Field importance:
+    1. field1: 97.12%
+    2. num_window: 2.88%
+Rules summary:
+A: (data 28.44% / prediction 28.44%) field1 <= 9106
+    · 99.30%: field1 <= 5541 [Confidence: 99.93%]
+    · 0.70%: 5541 < field1 <= 9106  and num_window > 838 [Confidence: 91.03%]
+B: (data 19.35% / prediction 19.35%) 
+    · 92.86%: 5541 < field1 <= 9106  and num_window <= 838 [Confidence: 99.89%]
+    · 7.14%: 9106 < field1 <= 12727  and num_window > 833 [Confidence: 98.60%]
+C: (data 17.44% / prediction 17.44%) field1 > 9106
+    · 97.90%: 9106 < field1 <= 12727  and num_window <= 833 [Confidence: 99.89%]
+    · 2.10%: 12727 < field1 <= 15902  and num_window > 830 [Confidence: 94.94%]
+D: (data 16.39% / prediction 16.39%) field1 > 12727
+    · 96.49%: 12727 < field1 <= 15902  and num_window <= 830 [Confidence: 99.88%]
+    · 3.51%: 15902 < field1 <= 16085  and num_window > 415 [Confidence: 96.71%]
+E: (data 18.38% / prediction 18.38%) field1 > 15902
+    · 98.06%: field1 > 16085 [Confidence: 99.89%]
+    · 1.94%: 15902 < field1 <= 16085  and num_window <= 415 [Confidence: 94.80%]
+modFitRandForest$finalModel
+<h6># prediction on Test dataset</h6>
+predictRandForest <- predict(modFitRandForest, newdata=TestSet)
+confMatRandForest <- confusionMatrix(predictRandForest, TestSet$classe)
+confMatRandForest
+predictTEST <- predict(modFitRandForest, newdata=testing)
+
+<h6>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</h6>
+
